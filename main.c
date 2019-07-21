@@ -66,7 +66,7 @@ void print_port(uint8_t *port){
     printf("%u\n", ((((port[0] & 0xFF)<< 8) | port[1])));
 }
 
-uint16_t get_port(uint8_t *port){
+uint16_t get_ntohs(uint8_t *port){
     return (((port[0] & 0xFF)<< 8) | port[1]);
 }
 
@@ -76,6 +76,24 @@ void print_type(uint8_t *port){
 
 void print_protocol(uint8_t* protocol){
     printf("%u\n", protocol[0]);
+}
+
+void print_tcp_data(const uint8_t* data){
+    //69, 70 -> size
+    uint8_t size_arr[] = {data[69], data[70]};
+    uint16_t data_size = get_ntohs(size_arr);
+
+    if(data_size < 10){
+        for(int i =0; i < data_size; i++){
+            printf("%x", data[66+i]);
+        }
+    }
+    else{
+        for(int i = 0; i < 10; i++){
+            printf("%x", data[66 + i]);
+        }
+    }
+
 }
 
 uint16_t my_ntohs(uint16_t n) {
@@ -153,27 +171,23 @@ int main(int argc, char* argv[]) {
                 printf("TCP");
                 init_tcp(&(pck.tcpudpType), packet);
 
-                if(get_port(pck.tcpudpType.Sport) == 443 || get_port(pck.tcpudpType.Dport) == 443){
-                    printf("| protocol - SSL");
+                if(get_ntohs(pck.tcpudpType.Sport) == 443 || get_ntohs(pck.tcpudpType.Dport) == 443){
+                    printf("| protocol - SSL\n");
+                    print_tcp_data(packet);
+
                 }
-                else if(get_port(pck.tcpudpType.Sport) == 80 || get_port(pck.tcpudpType.Dport) == 80){
-                    printf("| protocol - http");
+                else if(get_ntohs(pck.tcpudpType.Sport) == 80 || get_ntohs(pck.tcpudpType.Dport) == 80){
+                    printf("| protocol - http\n");
+                    print_tcp_data(packet);
                 }
                 printf("\n");
             }
             else if(pck.ipType.protocol[0] == 0x17){
                 // UDP
-                printf("UDP - ");
+                printf("UDP\n");
                 init_tcp(&(pck.tcpudpType), packet);
             }
         }
-
-        //printf("%d\n", pck.ipType.protocol);
-        //printf("The answer is : %x\n", packet[23]);
-        //printf("%x %x\n", pck.ethernetType.Type[0], pck.ethernetType.Type[1]);
-        //printf("The answer is : %x %x\n", packet[12], packet[13]);
-        //printf("size is : %ld\n", sizeof(pck.ethernetType.Type));
-        //printf("size is : %ld\n", sizeof(pck.ipType.protocol));
 
         printf("Smac : ");
         print_mac(pck.ethernetType.Smac);
@@ -199,12 +213,17 @@ int main(int argc, char* argv[]) {
         printf("Dport : ");
         print_port(pck.tcpudpType.Dport);
 
+        if(get_ntohs(pck.tcpudpType.Sport) == (443||80) || get_ntohs(pck.tcpudpType.Dport) == (443||80)){
+            printf("TCP DATA : ");
+            print_tcp_data(packet);
+            printf("\n");
 
+        }
+        // [66]부터 TCP DATA
 
+        //TODO 여기서 TCP data 10개까지 불러오게 하기
 
-        //TODO printValueDec 작동확인함.
-
-
+        //69,30이 길이
         // 사이즈 파라미터는 함수내부에서 처리할수있게 해보자.
         // 나머지는 멘토님 강의보고 결과물 작성.
     }
